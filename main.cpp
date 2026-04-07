@@ -67,8 +67,8 @@ class Paddle {
     }
 
     void Update() {
-        if (IsKeyDown(KEY_W)) y -= speed;
-        if (IsKeyDown(KEY_S)) y += speed;
+        if (IsKeyDown(KEY_UP)) y -= speed;
+        if (IsKeyDown(KEY_DOWN)) y += speed;
         LimitMovement();
     }
 };
@@ -88,8 +88,8 @@ CpuPaddle cpu;
 
 int main() {
     std::cout << "Starting the game" << std::endl;
-    const int screen_width = 1920;
-    const int screen_height = 1080;
+    const int screen_width = 1280;
+    const int screen_height = 720;
     InitWindow(screen_width, screen_height, "my pong game");
     SetTargetFPS(60);
 
@@ -110,37 +110,64 @@ int main() {
     cpu.speed = 6;
     cpu.color = brightRed;
 
+    // --- NEW: Added state and button variables ---
+    bool gameStarted = false;
+    Rectangle startButton = { (float)screen_width/2 - 100, (float)screen_height/2 - 40, 200, 80 };
+    // ---------------------------------------------
+
     while (WindowShouldClose() == false) {
-        ball.Update();
-        player.Update();
-        cpu.Update(ball.y);
-
-        // Collisions
-        if (CheckCollisionCircleRec({ball.x, ball.y}, ball.radius, {player.x, player.y, player.width, player.height})) {
-            ball.speed_x *= -1;
-        }
-        if (CheckCollisionCircleRec({ball.x, ball.y}, ball.radius, {cpu.x, cpu.y, cpu.width, cpu.height})) {
-            ball.speed_x *= -1;
-        }
-
-        BeginDrawing();
         
-        ClearBackground(darkRed);
-        DrawRectangle(0, 0, screen_width / 2, screen_height, darkBlue);
+        // --- MENU SCREEN ---
+        if (gameStarted == false) {
+            // Check if mouse clicks inside the button area
+            if (CheckCollisionPointRec(GetMousePosition(), startButton)) {
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    gameStarted = true; // Start the game!
+                }
+            }
 
-        Vector2 center = {(float)screen_width / 2, (float)screen_height / 2};
-        DrawCircleSector(center, 150, -90, 90, 60, brightRed);
-        DrawCircleSector(center, 150, 90, 270, 60, brightBlue);
+            BeginDrawing();
+            ClearBackground(BLACK);
+            
+            // Draw a simple white button with black text
+            DrawRectangleRec(startButton, WHITE);
+            DrawText("START", startButton.x + 35, startButton.y + 20, 40, BLACK);
+            
+            EndDrawing();
+        } 
+        // --- GAME SCREEN ---
+        else {
+            ball.Update();
+            player.Update();
+            cpu.Update(ball.y);
 
-        ball.Draw();
-        cpu.Draw();
-        player.Draw();
+            // Collisions
+            if (CheckCollisionCircleRec({ball.x, ball.y}, ball.radius, {player.x, player.y, player.width, player.height})) {
+                ball.speed_x *= -1;
+            }
+            if (CheckCollisionCircleRec({ball.x, ball.y}, ball.radius, {cpu.x, cpu.y, cpu.width, cpu.height})) {
+                ball.speed_x *= -1;
+            }
 
-        // Scores
-        DrawText(TextFormat("%i", player_score), screen_width / 4 - 20, 20, 80, WHITE);
-        DrawText(TextFormat("%i", cpu_score), 3 * screen_width / 4 - 20, 20, 80, WHITE);
+            BeginDrawing();
+            
+            ClearBackground(darkRed);
+            DrawRectangle(0, 0, screen_width / 2, screen_height, darkBlue);
 
-        EndDrawing();
+            Vector2 center = {(float)screen_width / 2, (float)screen_height / 2};
+            DrawCircleSector(center, 150, -90, 90, 60, brightRed);
+            DrawCircleSector(center, 150, 90, 270, 60, brightBlue);
+
+            ball.Draw();
+            cpu.Draw();
+            player.Draw();
+
+            // Scores
+            DrawText(TextFormat("%i", player_score), screen_width / 4 - 20, 20, 80, WHITE);
+            DrawText(TextFormat("%i", cpu_score), 3 * screen_width / 4 - 20, 20, 80, WHITE);
+
+            EndDrawing();
+        }
     }
 
     CloseWindow();
