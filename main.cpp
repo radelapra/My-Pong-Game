@@ -76,6 +76,9 @@ class Paddle {
 class CpuPaddle : public Paddle {
  public:
     void Update(int ball_y) {
+        // --- NEW: Force the CPU paddle to stay pinned to the right side if window width changes
+        x = GetScreenWidth() - width - 10; 
+        
         if (y + height / 2 > ball_y) y -= speed;
         if (y + height / 2 <= ball_y) y += speed;
         LimitMovement();
@@ -90,6 +93,9 @@ int main() {
     std::cout << "Starting the game" << std::endl;
     const int screen_width = 1280;
     const int screen_height = 720;
+    
+    // --- NEW: Tell raylib we want the window to be resizable
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE); 
     InitWindow(screen_width, screen_height, "my pong game");
     SetTargetFPS(60);
 
@@ -110,26 +116,31 @@ int main() {
     cpu.speed = 6;
     cpu.color = brightRed;
 
-    // --- NEW: Added state and button variables ---
     bool gameStarted = false;
     Rectangle startButton = { (float)screen_width/2 - 100, (float)screen_height/2 - 40, 200, 80 };
-    // ---------------------------------------------
 
     while (WindowShouldClose() == false) {
         
+        // --- NEW: Grab current window dimensions every frame so our drawing adapts
+        int currentWidth = GetScreenWidth();
+        int currentHeight = GetScreenHeight();
+
         // --- MENU SCREEN ---
         if (gameStarted == false) {
-            // Check if mouse clicks inside the button area
+            
+            // --- NEW: Constantly re-center the button in case the user resizes while in the menu
+            startButton.x = (float)currentWidth / 2 - 100;
+            startButton.y = (float)currentHeight / 2 - 40;
+
             if (CheckCollisionPointRec(GetMousePosition(), startButton)) {
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                    gameStarted = true; // Start the game!
+                    gameStarted = true; 
                 }
             }
 
             BeginDrawing();
             ClearBackground(BLACK);
             
-            // Draw a simple white button with black text
             DrawRectangleRec(startButton, WHITE);
             DrawText("START", startButton.x + 35, startButton.y + 20, 40, BLACK);
             
@@ -141,7 +152,6 @@ int main() {
             player.Update();
             cpu.Update(ball.y);
 
-            // Collisions
             if (CheckCollisionCircleRec({ball.x, ball.y}, ball.radius, {player.x, player.y, player.width, player.height})) {
                 ball.speed_x *= -1;
             }
@@ -152,9 +162,11 @@ int main() {
             BeginDrawing();
             
             ClearBackground(darkRed);
-            DrawRectangle(0, 0, screen_width / 2, screen_height, darkBlue);
+            // --- NEW: Draw backgrounds relative to currentWidth/Height
+            DrawRectangle(0, 0, currentWidth / 2, currentHeight, darkBlue);
 
-            Vector2 center = {(float)screen_width / 2, (float)screen_height / 2};
+            // --- NEW: Center the arena circles dynamically
+            Vector2 center = {(float)currentWidth / 2, (float)currentHeight / 2};
             DrawCircleSector(center, 150, -90, 90, 60, brightRed);
             DrawCircleSector(center, 150, 90, 270, 60, brightBlue);
 
@@ -162,9 +174,9 @@ int main() {
             cpu.Draw();
             player.Draw();
 
-            // Scores
-            DrawText(TextFormat("%i", player_score), screen_width / 4 - 20, 20, 80, WHITE);
-            DrawText(TextFormat("%i", cpu_score), 3 * screen_width / 4 - 20, 20, 80, WHITE);
+            // --- NEW: Space the scores dynamically based on the current width
+            DrawText(TextFormat("%i", player_score), currentWidth / 4 - 20, 20, 80, WHITE);
+            DrawText(TextFormat("%i", cpu_score), 3 * currentWidth / 4 - 20, 20, 80, WHITE);
 
             EndDrawing();
         }
